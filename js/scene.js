@@ -7,12 +7,20 @@ class Scene3D {
         this.pathLine = null;
         this.glowLine = null;
         this.marker = null;
+        this.markerGlow = null;
         this.groundPlane = null;
         this.data = null;
         this.currentPointIndex = 0;
         this.cameraTarget = new THREE.Vector3();
         this.cameraPosition = new THREE.Vector3();
         this.isInitialized = false;
+        this.isDragging = false;
+        this.previousMousePosition = { x: 0, y: 0 };
+        this.spherical = { radius: 0, theta: 0, phi: 0 };
+        this.windParticles = [];
+        this.windDirection = 0;
+        this.satelliteGroup = null;
+        this.tileBounds = null;
 
         this.init();
     }
@@ -41,6 +49,9 @@ class Scene3D {
 
         window.addEventListener('resize', () => this.onResize());
         window.addEventListener('wheel', (e) => this.handleWheel(e), { passive: false });
+        this.renderer.domElement.addEventListener('mousedown', (e) => this.onMouseDown(e));
+        window.addEventListener('mousemove', (e) => this.onMouseMove(e));
+        window.addEventListener('mouseup', () => this.onMouseUp());
 
         this.isInitialized = true;
     }
@@ -56,6 +67,12 @@ class Scene3D {
         this.groundPlane.rotation.x = -Math.PI / 2;
         this.groundPlane.position.y = -1;
         this.rootGroup.add(this.groundPlane);
+    }
+
+    setWindDirection(deg) {
+        this.windDirection = deg;
+        this.clearWindParticles();
+        this.createWindParticles();
     }
 
     createSatelliteGround(centerLat, centerLon, bounds) {
@@ -76,6 +93,11 @@ class Scene3D {
 
         const tileMeshes = [];
         const tileUrls = [];
+
+        let minTileX = Infinity;
+        let maxTileX = -Infinity;
+        let minTileZ = Infinity;
+        let maxTileZ = -Infinity;
 
         for (let dy = -tileRadius; dy <= tileRadius; dy++) {
             for (let dx = -tileRadius; dx <= tileRadius; dx++) {
@@ -110,6 +132,11 @@ class Scene3D {
                 tile.frustumCulled = false;
                 newGroup.add(tile);
                 tileMeshes.push(tile);
+
+                minTileX = Math.min(minTileX, tileX - tileWidthMeters * overlap / 2);
+                maxTileX = Math.max(maxTileX, tileX + tileWidthMeters * overlap / 2);
+                minTileZ = Math.min(minTileZ, tileZ - tileHeightMeters * overlap / 2);
+                maxTileZ = Math.max(maxTileZ, tileZ + tileHeightMeters * overlap / 2);
             }
         }
 
@@ -124,7 +151,7 @@ class Scene3D {
                 (texture) => {
                     texture.anisotropy = this.renderer.capabilities.getMaxAnisotropy();
                     texture.flipY = true;
-                    texture.flipX = true
+                    texture.flipX = true;
                     texture.generateMipmaps = true;
                     texture.minFilter = THREE.LinearMipmapLinearFilter;
                     texture.magFilter = THREE.LinearFilter;
@@ -143,6 +170,8 @@ class Scene3D {
                         this.rootGroup.add(this.satelliteGroup);
                         newGroup.visible = true;
 
+                        this.tileBounds = { minX: minTileX, maxX: maxTileX, minZ: minTileZ, maxZ: maxTileZ };
+
                         if (oldGroup) {
                             this.rootGroup.remove(oldGroup);
                             oldGroup.traverse(obj => {
@@ -153,6 +182,9 @@ class Scene3D {
                                 }
                             });
                         }
+
+                        this.clearWindParticles();
+                        this.createWindParticles();
                     }
                 },
                 undefined,
@@ -164,6 +196,8 @@ class Scene3D {
                         this.rootGroup.add(this.satelliteGroup);
                         newGroup.visible = true;
 
+                        this.tileBounds = { minX: minTileX, maxX: maxTileX, minZ: minTileZ, maxZ: maxTileZ };
+
                         if (oldGroup) {
                             this.rootGroup.remove(oldGroup);
                             oldGroup.traverse(obj => {
@@ -174,6 +208,9 @@ class Scene3D {
                                 }
                             });
                         }
+
+                        this.clearWindParticles();
+                        this.createWindParticles();
                     }
                 }
             );
@@ -185,40 +222,44 @@ class Scene3D {
         return (180 / Math.PI) * Math.atan(0.5 * (Math.exp(n) - Math.exp(-n)));
     }
 
-    loadData(gpxData) {
+    loadData(gpxData, windDirectionDeg) {
         this.data = gpxData;
         this.currentPointIndex = 0;
         this.pathHeight = 3;
-
-        this.clearPath();
-        this.createPathLine();
-        this.createGlowLine();
-        this.createMarker();
-        this.createSatelliteGround(gpxData.center.lat, gpxData.center.lon, gpxData.bounds);
+        this.windDirection = windDirectionDeg || 0;
+        this.tileBounds = null;
 
         const minX = Math.min(...gpxData.points.map(p => p.x));
         const maxX = Math.max(...gpxData.points.map(p => p.x));
         const minZ = Math.min(...gpxData.points.map(p => p.z));
         const maxZ = Math.max(...gpxData.points.map(p => p.z));
 
-        const pathWidth = maxX - minX;
-        const pathLength = maxZ - minZ;
-        const pathSize = Math.max(pathWidth, pathLength);
+        const centerX = -(minX + maxX) / 2;
+        const centerZ = (minZ + maxZ) / 2;
+
+        const pathSize = Math.max(maxX - minX, maxZ - minZ);
 
         const fov = this.camera.fov * (Math.PI / 180);
         const distanceForFov = (pathSize / 2) / Math.tan(fov / 2);
-        const cameraDistance = distanceForFov * 0.88;
-        const cameraHeight = Math.max(pathSize * 0.3, 50);
 
         this.cameraOffset = {
-            distance: cameraDistance,
-            height: cameraHeight,
-            angle: Math.PI / 2.2
+            distance: distanceForFov * 0.88,
+            height: Math.max(pathSize * 0.3, 50)
         };
 
-        this.updateCameraPosition(0);
+        this.cameraTarget.set(centerX, 0, centerZ);
+        this.spherical.theta = 0;
+        this.spherical.phi = Math.PI / 4;
 
-        this.camera.position.copy(this.cameraPosition);
+        this.updateCameraFromSpherical();
+
+        this.clearPath();
+        this.clearWindParticles();
+        this.createPathLine();
+        this.createGlowLine();
+        this.createMarker();
+        this.createWindParticles();
+        this.createSatelliteGround(gpxData.center.lat, gpxData.center.lon, gpxData.bounds);
     }
 
     clearPath() {
@@ -239,6 +280,76 @@ class Scene3D {
             this.marker.geometry.dispose();
             this.marker.material.dispose();
             this.marker = null;
+        }
+    }
+
+    clearWindParticles() {
+        this.windParticles.forEach(p => {
+            this.rootGroup.remove(p.head);
+            p.head.geometry.dispose();
+            p.head.material.dispose();
+            p.trail.forEach(m => {
+                this.rootGroup.remove(m);
+                m.geometry.dispose();
+                m.material.dispose();
+            });
+        });
+        this.windParticles = [];
+    }
+
+     createWindParticles() {
+        const rad = (this.windDirection - 90) * Math.PI / 180;
+        this.windDirX = -Math.cos(rad);
+        this.windDirZ = Math.sin(rad);
+
+        let minX, maxX, minZ, maxZ;
+        if (this.tileBounds) {
+            minX = this.tileBounds.minX;
+            maxX = this.tileBounds.maxX;
+            minZ = this.tileBounds.minZ;
+            maxZ = this.tileBounds.maxZ;
+        } else {
+            const points = this.data.points;
+            minX = Math.min(...points.map(p => p.x));
+            maxX = Math.max(...points.map(p => p.x));
+            minZ = Math.min(...points.map(p => p.z));
+            maxZ = Math.max(...points.map(p => p.z));
+        }
+        const w = maxX - minX || 600;
+        const d = maxZ - minZ || 600;
+
+        const count = 2000;
+        const trailLength = 6;
+
+        for (let i = 0; i < count; i++) {
+            const headGeo = new THREE.SphereGeometry(4, 6, 6);
+            const headMat = new THREE.MeshBasicMaterial({ color: 0x4488ff, transparent: true, opacity: 0.5 });
+            const head = new THREE.Mesh(headGeo, headMat);
+
+            const x = minX - 50 + Math.random() * (w + 100);
+            const z = minZ - 50 + Math.random() * (d + 100);
+            const y = this.pathHeight + 30 + Math.random() * 60;
+            head.position.set(x, y, z);
+            this.rootGroup.add(head);
+
+            const trail = [];
+            for (let j = 1; j <= trailLength; j++) {
+                const tGeo = new THREE.SphereGeometry(4 * (1 - j / trailLength), 4, 4);
+                const tMat = new THREE.MeshBasicMaterial({ color: 0x4488ff, transparent: true, opacity: 0.5 * (1 - j / trailLength) });
+                const t = new THREE.Mesh(tGeo, tMat);
+                t.position.set(x - this.windDirX * j * 10, y, z - this.windDirZ * j * 10);
+                this.rootGroup.add(t);
+                trail.push(t);
+            }
+
+            this.windParticles.push({
+                head,
+                trail,
+                speed: 10 + Math.random() * 8,
+                x: x,
+                z: z,
+                y: y
+            });
         }
     }
 
@@ -368,6 +479,47 @@ class Scene3D {
         this.cameraOffset.distance = Math.min(this.cameraOffset.distance, 50000);
         this.cameraOffset.height = Math.max(this.cameraOffset.height, 5);
         this.cameraOffset.height = Math.min(this.cameraOffset.height, 20000);
+
+        this.updateCameraFromSpherical();
+    }
+
+    onMouseDown(event) {
+        this.isDragging = true;
+        this.previousMousePosition = { x: event.clientX, y: event.clientY };
+    }
+
+    onMouseMove(event) {
+        if (!this.isDragging) return;
+
+        const deltaX = event.clientX - this.previousMousePosition.x;
+        const deltaY = event.clientY - this.previousMousePosition.y;
+
+        this.spherical.theta -= deltaX * 0.005;
+        this.spherical.phi -= deltaY * 0.005;
+        this.spherical.phi = Math.max(0.1, Math.min(Math.PI / 2 - 0.1, this.spherical.phi));
+
+        this.previousMousePosition = { x: event.clientX, y: event.clientY };
+        this.updateCameraFromSpherical();
+    }
+
+    onMouseUp() {
+        this.isDragging = false;
+    }
+
+    updateCameraFromSpherical() {
+        if (!this.cameraOffset || !this.cameraTarget) return;
+
+        const r = this.cameraOffset.distance;
+        const theta = this.spherical.theta;
+        const phi = this.spherical.phi;
+
+        this.cameraPosition.x = r * Math.sin(phi) * Math.cos(theta);
+        this.cameraPosition.y = r * Math.cos(phi) + this.cameraOffset.height;
+        this.cameraPosition.z = r * Math.sin(phi) * Math.sin(theta);
+
+        const center = this.cameraTarget;
+        this.cameraPosition.x += center.x;
+        this.cameraPosition.z += center.z;
     }
 
     updateCameraSmooth() {
@@ -405,17 +557,61 @@ class Scene3D {
             this.marker.visible = false;
         }
 
-        this.updateCameraPosition(progress);
+        if (visiblePoints > 0) {
+            const currentPoint = this.data.points[visiblePoints - 1];
+            this.cameraTarget.set(-currentPoint.x, 0, currentPoint.z);
+            this.updateCameraFromSpherical();
+        }
+
         this.currentPointIndex = visiblePoints;
     }
 
     animate() {
-        this.updateCameraSmooth();
+        if (this.cameraPosition && this.cameraTarget) {
+            this.camera.position.copy(this.cameraPosition);
+            this.camera.lookAt(this.cameraTarget);
+        }
+
+        if (!this.data) return;
 
         if (this.marker && this.marker.visible) {
             const pulse = Math.sin(Date.now() * 0.005) * 0.1 + 1;
             this.markerGlow.scale.set(pulse, pulse, pulse);
         }
+
+        let minX, maxX, minZ, maxZ;
+        if (this.tileBounds) {
+            minX = this.tileBounds.minX;
+            maxX = this.tileBounds.maxX;
+            minZ = this.tileBounds.minZ;
+            maxZ = this.tileBounds.maxZ;
+        } else {
+            const points = this.data.points;
+            minX = Math.min(...points.map(p => p.x)) - 50;
+            maxX = Math.max(...points.map(p => p.x)) + 50;
+            minZ = Math.min(...points.map(p => p.z)) - 50;
+            maxZ = Math.max(...points.map(p => p.z)) + 50;
+        }
+        const w = maxX - minX;
+        const d = maxZ - minZ;
+
+        this.windParticles.forEach(p => {
+            const dt = 0.016;
+            p.x += this.windDirX * p.speed * dt;
+            p.z += this.windDirZ * p.speed * dt;
+
+            if (p.x > maxX) p.x -= w;
+            if (p.x < minX) p.x += w;
+            if (p.z > maxZ) p.z -= d;
+            if (p.z < minZ) p.z += d;
+
+            p.head.position.set(p.x, p.y, p.z);
+
+            p.trail.forEach((m, j) => {
+                const s = (j + 1) * 12;
+                m.position.set(p.x - this.windDirX * s, p.y, p.z - this.windDirZ * s);
+            });
+        });
 
         this.renderer.render(this.scene, this.camera);
     }

@@ -104,6 +104,20 @@ test.describe('GPX 3D Visualizer - E2E', () => {
         await page.locator('#play-pause-btn').click();
     });
 
+    test('wind overlay shows after loading GPX', async ({ page }) => {
+        await page.locator('#load-example-btn').click();
+        await expect(page.locator('#upload-overlay')).toBeHidden({ timeout: 30000 });
+
+        const windOverlay = page.locator('#wind-overlay');
+        await expect(windOverlay).toBeVisible({ timeout: 30000 });
+
+        const windSpeed = page.locator('#wind-speed');
+        await expect(windSpeed).not.toHaveText('--');
+
+        const windDirection = page.locator('#wind-direction');
+        await expect(windDirection).not.toHaveText('--');
+    });
+
     test('speed defaults to 100x', async ({ page }) => {
         await page.locator('#load-example-btn').click();
         await expect(page.locator('#upload-overlay')).toBeHidden({ timeout: 10000 });

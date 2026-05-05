@@ -1,4 +1,4 @@
-class App {
+﻿class App {
     constructor() {
         this.scene = null;
         this.gpxData = null;
@@ -273,27 +273,29 @@ class App {
     }
 
     animate() {
+        if (!this.isPlaying) return;
+
         this.animationId = requestAnimationFrame(() => this.animate());
 
         const now = performance.now();
         const delta = now - this.lastFrameTime;
 
-        if (this.isPlaying && delta >= 33.33) {
-            this.lastFrameTime = now - (delta % 33.33);
+        if (delta < 33.33) return;
 
-            if (!this.isUserScrubbing && this.gpxData.stats.totalDuration > 0) {
-                const durationSeconds = this.gpxData.stats.totalDuration / 1000;
-                const progressIncrement = (delta / 1000) * this.playbackSpeed / durationSeconds;
-                this.currentProgress = Math.min(this.currentProgress + progressIncrement, 1);
+        this.lastFrameTime = now - (delta % 33.33);
 
-                this.timeline.value = Math.round(this.currentProgress * 1000);
-                this.updateTimeDisplay();
-                this.scene.updateProgress(this.currentProgress);
+        if (!this.isUserScrubbing && this.gpxData.stats.totalDuration > 0) {
+            const durationSeconds = this.gpxData.stats.totalDuration / 1000;
+            const progressIncrement = (delta / 1000) * this.playbackSpeed / durationSeconds;
+            this.currentProgress = Math.min(this.currentProgress + progressIncrement, 1);
 
-                if (this.currentProgress >= 1) {
-                    this.isPlaying = false;
-                    this.updatePlayPauseIcon();
-                }
+            this.timeline.value = Math.round(this.currentProgress * 1000);
+            this.updateTimeDisplay();
+            this.scene.updateProgress(this.currentProgress);
+
+            if (this.currentProgress >= 1) {
+                this.isPlaying = false;
+                this.updatePlayPauseIcon();
             }
         }
 
@@ -312,3 +314,5 @@ class App {
 document.addEventListener('DOMContentLoaded', () => {
     window.app = new App();
 });
+
+
