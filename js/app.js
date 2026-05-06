@@ -107,36 +107,12 @@ class App {
     async loadExampleGpx() {
         this.loading.classList.remove('hidden');
 
-        try {
-            const response = await fetch('activity_22766008358.gpx');
-            if (!response.ok) {
-                throw new Error('Could not load example GPX file');
-            }
-            const text = await response.text();
-            console.log('Example GPX file size:', text.length, 'bytes');
-            this.gpxData = GpxParser.parse(text);
-            console.log('Parsed GPX:', this.gpxData.points.length, 'points');
-            this.scene.loadData(this.gpxData, this.windDir);
-
-            this.uploadOverlay.classList.add('hidden');
-            this.controls.classList.remove('hidden');
-            this.statsBar.classList.remove('hidden');
-            this.loading.classList.add('hidden');
-
-            this.updateStats();
-            this.updateTimeDisplay();
-            this.scene.updateProgress(0);
-            this.fetchWindData();
-
-            this.currentProgress = 0;
-            this.isPlaying = false;
-            this.updatePlayPauseIcon();
-
-        } catch (error) {
-            console.error('Error loading example GPX:', error);
-            alert('Error loading example: ' + error.message);
-            this.loading.classList.add('hidden');
+        const response = await fetch('activity_22766008358.gpx');
+        if (!response.ok) {
+            throw new Error('Could not load example GPX file');
         }
+        const text = await response.text();
+        this.loadGpxText(text)
     }
 
     async loadGpxFile(file) {
@@ -144,15 +120,19 @@ class App {
             alert('Please select a valid GPX file');
             return;
         }
+        const text = await file.text();
+        this.loadGpxText(text)
+    }
+
+    async loadGpxText(text) {
 
         this.loading.classList.remove('hidden');
 
         try {
-            const text = await file.text();
             console.log('GPX file size:', text.length, 'bytes');
             this.gpxData = GpxParser.parse(text);
             console.log('Parsed GPX:', this.gpxData.points.length, 'points');
-            this.scene.loadData(this.gpxData, this.windDir);
+            const onLoad = this.scene.loadData(this.gpxData, this.windDir);
 
             this.uploadOverlay.classList.add('hidden');
             this.controls.classList.remove('hidden');
