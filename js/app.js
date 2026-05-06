@@ -142,12 +142,16 @@ class App {
             this.updateStats();
             this.updateTimeDisplay();
             this.scene.updateProgress(0);
-            this.scene.animate();
             this.fetchWindData();
 
             this.currentProgress = 0;
             this.isPlaying = false;
             this.updatePlayPauseIcon();
+
+            if (!this.animationId) {
+                this.lastFrameTime = performance.now();
+                this.animate();
+            }
 
         } catch (error) {
             console.error('Error loading GPX:', error);
@@ -234,12 +238,6 @@ class App {
 
         if (this.isPlaying) {
             this.lastFrameTime = performance.now();
-            this.animate();
-        } else {
-            if (this.animationId) {
-                cancelAnimationFrame(this.animationId);
-                this.animationId = null;
-            }
         }
     }
 
