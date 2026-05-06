@@ -140,15 +140,11 @@ class Scene3D {
             }
         }
 
-        const totalTiles = tileMeshes.length;
-        let loadedCount = 0;
-
-        tileMeshes.forEach((tile, index) => {
+        const loadPromises = tileMeshes.map((tile, index) => {
             const loader = new THREE.TextureLoader();
             loader.crossOrigin = 'anonymous';
-            loader.load(
-                tileUrls[index],
-                (texture) => {
+            return loader.loadAsync(tileUrls[index])
+                .then(texture => {
                     texture.anisotropy = this.renderer.capabilities.getMaxAnisotropy();
                     texture.flipY = true;
                     texture.flipX = true;
@@ -162,58 +158,31 @@ class Scene3D {
                         transparent: false,
                         depthWrite: true
                     });
+                })
+                .catch(() => {});
+        });
 
-                    loadedCount++;
-                    if (loadedCount === totalTiles) {
-                        const oldGroup = this.satelliteGroup;
-                        this.satelliteGroup = newGroup;
-                        this.rootGroup.add(this.satelliteGroup);
-                        newGroup.visible = true;
+        return Promise.all(loadPromises).then(() => {
+            const oldGroup = this.satelliteGroup;
+            this.satelliteGroup = newGroup;
+            this.rootGroup.add(this.satelliteGroup);
+            newGroup.visible = true;
 
-                        this.tileBounds = { minX: minTileX, maxX: maxTileX, minZ: minTileZ, maxZ: maxTileZ };
+            this.tileBounds = { minX: minTileX, maxX: maxTileX, minZ: minTileZ, maxZ: maxTileZ };
 
-                        if (oldGroup) {
-                            this.rootGroup.remove(oldGroup);
-                            oldGroup.traverse(obj => {
-                                if (obj.geometry) obj.geometry.dispose();
-                                if (obj.material) {
-                                    if (obj.material.map) obj.material.map.dispose();
-                                    obj.material.dispose();
-                                }
-                            });
-                        }
-
-                        this.clearWindParticles();
-                        this.createWindParticles();
+            if (oldGroup) {
+                this.rootGroup.remove(oldGroup);
+                oldGroup.traverse(obj => {
+                    if (obj.geometry) obj.geometry.dispose();
+                    if (obj.material) {
+                        if (obj.material.map) obj.material.map.dispose();
+                        obj.material.dispose();
                     }
-                },
-                undefined,
-                () => {
-                    loadedCount++;
-                    if (loadedCount === totalTiles) {
-                        const oldGroup = this.satelliteGroup;
-                        this.satelliteGroup = newGroup;
-                        this.rootGroup.add(this.satelliteGroup);
-                        newGroup.visible = true;
+                });
+            }
 
-                        this.tileBounds = { minX: minTileX, maxX: maxTileX, minZ: minTileZ, maxZ: maxTileZ };
-
-                        if (oldGroup) {
-                            this.rootGroup.remove(oldGroup);
-                            oldGroup.traverse(obj => {
-                                if (obj.geometry) obj.geometry.dispose();
-                                if (obj.material) {
-                                    if (obj.material.map) obj.material.map.dispose();
-                                    obj.material.dispose();
-                                }
-                            });
-                        }
-
-                        this.clearWindParticles();
-                        this.createWindParticles();
-                    }
-                }
-            );
+            this.clearWindParticles();
+            this.createWindParticles();
         });
     }
 
@@ -259,7 +228,7 @@ class Scene3D {
         this.createGlowLine();
         this.createMarker();
         this.createWindParticles();
-        this.createSatelliteGround(gpxData.center.lat, gpxData.center.lon, gpxData.bounds);
+        return this.createSatelliteGround(gpxData.center.lat, gpxData.center.lon, gpxData.bounds);
     }
 
     clearPath() {

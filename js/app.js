@@ -132,7 +132,7 @@ class App {
             console.log('GPX file size:', text.length, 'bytes');
             this.gpxData = GpxParser.parse(text);
             console.log('Parsed GPX:', this.gpxData.points.length, 'points');
-            const onLoad = this.scene.loadData(this.gpxData, this.windDir);
+            await this.scene.loadData(this.gpxData, this.windDir);
 
             this.uploadOverlay.classList.add('hidden');
             this.controls.classList.remove('hidden');
@@ -142,6 +142,7 @@ class App {
             this.updateStats();
             this.updateTimeDisplay();
             this.scene.updateProgress(0);
+            this.scene.animate();
             this.fetchWindData();
 
             this.currentProgress = 0;
