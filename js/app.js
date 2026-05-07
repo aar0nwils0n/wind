@@ -37,6 +37,8 @@ class App {
         this.windOverlay = document.getElementById('wind-overlay');
         this.windSpeed = document.getElementById('wind-speed');
         this.windDirection = document.getElementById('wind-direction');
+        this.upwindOverlay = document.getElementById('upwind-overlay');
+        this.upwindAngle = document.getElementById('upwind-angle');
     }
 
     initScene() {
@@ -75,6 +77,7 @@ class App {
             this.currentProgress = this.timeline.value / 1000;
             this.scene.updateProgress(this.currentProgress);
             this.updateTimeDisplay();
+            this.updateUpwindAngle();
         });
 
         this.timeline.addEventListener('change', () => {
@@ -142,7 +145,8 @@ class App {
             this.updateStats();
             this.updateTimeDisplay();
             this.scene.updateProgress(0);
-            this.fetchWindData();
+            await this.fetchWindData();
+            this.upwindOverlay.classList.remove('hidden');
 
             this.currentProgress = 0;
             this.isPlaying = false;
@@ -179,9 +183,11 @@ class App {
 
         const lat = points[0].lat;
         const lon = points[0].lon;
-        const startTime = points[0].time;
-        const dateStr = startTime.toISOString().split('T')[0];
+        const startTime = this._activityStartDate;
 
+        if (!startTime) return;
+
+        const dateStr = startTime.toISOString().split('T')[0];
         const url = `https://archive-api.open-meteo.com/v1/era5?latitude=${lat}&longitude=${lon}&start_date=${dateStr}&end_date=${dateStr}&hourly=windspeed_10m,winddirection_10m&timezone=UTC`;
 
         try {
@@ -190,6 +196,7 @@ class App {
             const response = await fetch(url, { signal: controller.signal });
             clearTimeout(timeout);
             const data = await response.json();
+
             const times = data.hourly.time;
             const speeds = data.hourly.windspeed_10m;
             const directions = data.hourly.winddirection_10m;
@@ -207,6 +214,7 @@ class App {
                 this.windOverlay.classList.remove('hidden');
                 this.windDir = direction;
                 this.scene.setWindDirection(direction);
+                this.updateUpwindAngle();
             }
         } catch (err) {
             console.error('Failed to fetch wind data:', err);
@@ -216,6 +224,33 @@ class App {
     degToCompass(deg) {
         const dirs = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
         return dirs[Math.round(deg / 45) % 8];
+    }
+
+    updateUpwindAngle() {
+        if (!this.gpxData || this.windDir === null) return;
+
+        const points = this.gpxData.points;
+        const pointIndex = Math.floor(this.currentProgress * (points.length - 1));
+
+        if (pointIndex < 1) {
+            this.upwindAngle.textContent = '--';
+            return;
+        }
+
+        const prevPoint = points[pointIndex - 1];
+        const currPoint = points[pointIndex];
+
+        const dx = currPoint.x - prevPoint.x;
+        const dz = currPoint.z - prevPoint.z;
+
+        const travelAngle = Math.atan2(dz, dx) * 180 / Math.PI;
+        const travelCompass = (90 - travelAngle + 360) % 360;
+
+        const angleDiff = Math.abs(travelCompass - this.windDir);
+        const angleToWind = Math.min(angleDiff, 360 - angleDiff);
+        const upwindAngle = 90 - angleToWind;
+
+        this.upwindAngle.textContent = `${Math.round(upwindAngle)}°`;
     }
 
     updateTimeDisplay() {
@@ -268,6 +303,7 @@ class App {
                 this.timeline.value = Math.round(this.currentProgress * 1000);
                 this.updateTimeDisplay();
                 this.scene.updateProgress(this.currentProgress);
+                this.updateUpwindAngle();
 
                 if (this.currentProgress >= 1) {
                     this.isPlaying = false;
@@ -285,9 +321,33 @@ class App {
         this.timeline.value = Math.round(this.currentProgress * 1000);
         this.updateTimeDisplay();
         this.scene.updateProgress(this.currentProgress);
+        this.updateUpwindAngle();
     }
 }
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
     window.app = new App();
+
+    const params = new URLSearchParams(window.location.search);
+    const activityId = params.get('activityId');
+    const userId = params.get('userId');
+
+    if (activityId && userId) {
+        try {
+            const res = await fetch(`/api/strava/activity/${activityId}/gpx?userId=${userId}`);
+            const data = await res.json();
+
+            if (data.startDate) {
+                window.app._activityStartDate = new Date(data.startDate);
+            }
+
+            await window.app.loadGpxText(data.gpx);
+            window.app.isPlaying = false;
+            window.app.updatePlayPauseIcon();
+            window.app.updateUpwindAngle();
+            history.replaceState(null, '', '/');
+        } catch (err) {
+            console.error('Failed to load activity GPX:', err);
+        }
+    }
 });

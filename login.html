@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Connect Strava</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="container">
+    <h1>Connect to Strava</h1>
+    <p>Connect your Strava account to view your activities.</p>
+    <a href="#" id="connect-btn" class="btn">Connect with Strava</a>
+  </div>
+  <script>
+    async function init() {
+      const res = await fetch('/api/config')
+      const config = await res.json()
+      const scope = 'read,activity:read_all'
+      document.getElementById('connect-btn').href =
+        `/api/strava/authorize`
+    }
+    init()
+  </script>
+</body>
+</html>

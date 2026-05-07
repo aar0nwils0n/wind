@@ -5,6 +5,31 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>GPX 3D Visualizer</title>
     <link rel="stylesheet" href="css/style.css">
+    <style>
+        #upwind-overlay {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 10px 15px;
+            border-radius: 8px;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            font-size: 14px;
+            z-index: 100;
+        }
+        .upwind-label {
+            color: #aaa;
+            font-size: 12px;
+            text-transform: uppercase;
+        }
+        .upwind-value {
+            font-weight: bold;
+            color: #00d4ff;
+        }
+    </style>
 </head>
 <body>
     <div id="canvas-container"></div>
@@ -86,6 +111,11 @@
         <span class="wind-label">Wind</span>
         <span id="wind-speed" class="wind-value">--</span>
         <span id="wind-direction" class="wind-value">--</span>
+    </div>
+
+    <div id="upwind-overlay" class="hidden">
+        <span class="upwind-label">Upwind Angle</span>
+        <span id="upwind-angle" class="upwind-value">--</span>
     </div>
 
     <div id="loading" class="hidden">
