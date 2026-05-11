@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GPX 3D Visualizer</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        #upwind-overlay {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 10px 15px;
+            border-radius: 8px;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            font-size: 14px;
+            z-index: 100;
+        }
+        .upwind-label {
+            color: #aaa;
+            font-size: 12px;
+            text-transform: uppercase;
+        }
+        .upwind-value {
+            font-weight: bold;
+            color: #00d4ff;
+        }
+    </style>
+</head>
+<body>
+    <div id="canvas-container"></div>
+
+    <div id="upload-overlay">
+        <div class="upload-box">
+            <h1>GPX 3D Visualizer</h1>
+            <p>Upload a GPX file to visualize your activity in 3D</p>
+            <label for="gpx-input" class="upload-btn">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                    <polyline points="17 8 12 3 7 8"/>
+                    <line x1="12" y1="3" x2="12" y2="15"/>
+                </svg>
+                <span>Upload GPX File</span>
+            </label>
+            <button id="load-example-btn" class="example-btn">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polygon points="5 3 19 12 5 21 5 3"/>
+                </svg>
+                <span>Load Example Activity</span>
+            </button>
+            <input type="file" id="gpx-input" accept=".gpx" hidden>
+            <p class="hint">or drag and drop a .gpx file</p>
+        </div>
+    </div>
+
+    <div id="controls" class="hidden">
+        <div class="control-bar">
+            <button id="play-pause-btn" class="btn" title="Play/Pause">
+                <svg id="play-icon" width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                    <polygon points="5 3 19 12 5 21 5 3"/>
+                </svg>
+                <svg id="pause-icon" width="20" height="20" viewBox="0 0 24 24" fill="currentColor" class="hidden">
+                    <rect x="6" y="4" width="4" height="16"/>
+                    <rect x="14" y="4" width="4" height="16"/>
+                </svg>
+            </button>
+
+            <div class="timeline-container">
+                <span id="current-time" class="time-label">00:00</span>
+                <input type="range" id="timeline" min="0" max="1000" value="0" step="1">
+                <span id="total-time" class="time-label">00:00</span>
+            </div>
+
+            <div class="speed-control">
+                <label for="speed">Speed:</label>
+                <select id="speed">
+                <option value="10">10x</option>
+                <option value="50">50x</option>
+                <option value="100" selected>100x</option>
+                <option value="200">200x</option>
+                <option value="500">500x</option>
+                </select>
+            </div>
+        </div>
+
+        <div id="stats" class="stats-bar hidden">
+            <div class="stat">
+                <span class="stat-label">Distance</span>
+                <span id="stat-distance" class="stat-value">0 km</span>
+            </div>
+            <div class="stat">
+                <span class="stat-label">Elevation</span>
+                <span id="stat-elevation" class="stat-value">0 m</span>
+            </div>
+            <div class="stat">
+                <span class="stat-label">Duration</span>
+                <span id="stat-duration" class="stat-value">00:00</span>
+            </div>
+            <div class="stat">
+                <span class="stat-label">Speed</span>
+                <span id="stat-speed" class="stat-value">0 mph</span>
+            </div>
+        </div>
+    </div>
+
+    <div id="wind-overlay" class="hidden">
+        <span class="wind-label">Wind</span>
+        <span id="wind-speed" class="wind-value">--</span>
+        <span id="wind-direction" class="wind-value">--</span>
+    </div>
+
+    <div id="upwind-overlay" class="hidden">
+        <span class="upwind-label">Upwind Angle</span>
+        <span id="upwind-angle" class="upwind-value">--</span>
+        <span id="current-speed" class="upwind-value" style="margin-left: 0.5rem; color: #888;">0 mph</span>
+    </div>
+
+    <div id="loading" class="hidden">
+        <div class="spinner"></div>
+        <p>Loading GPX data...</p>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
