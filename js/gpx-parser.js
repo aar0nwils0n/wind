@@ -146,8 +146,8 @@ class GpxParser {
     }
 
     static formatSpeed(mps) {
-        const kmh = mps * 3.6;
-        return `${kmh.toFixed(1)} km/h`;
+        const mph = mps * 2.23694;
+        return `${mph.toFixed(1)} mph`;
     }
 }
 

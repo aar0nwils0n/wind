@@ -5,20 +5,69 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Connect Strava</title>
   <link rel="stylesheet" href="css/style.css">
+  <style>
+    body {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      overflow: hidden;
+    }
+    .connect-box {
+      text-align: center;
+      padding: 3rem;
+    }
+    .connect-box h1 {
+      font-size: 2.5rem;
+      margin-bottom: 1rem;
+      background: linear-gradient(90deg, #00d4ff, #7b2cbf);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .connect-box p {
+      color: #888;
+      margin-bottom: 2rem;
+      font-size: 1.1rem;
+    }
+    .strava-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 1rem 2rem;
+      background: linear-gradient(90deg, #fc4c02, #e34400);
+      border-radius: 8px;
+      text-decoration: none;
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: #fff;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .strava-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 25px rgba(252, 76, 2, 0.3);
+    }
+    .strava-btn svg {
+      flex-shrink: 0;
+    }
+  </style>
 </head>
 <body>
-  <div class="container">
+  <div class="connect-box">
     <h1>Connect to Strava</h1>
-    <p>Connect your Strava account to view your activities.</p>
-    <a href="#" id="connect-btn" class="btn">Connect with Strava</a>
+    <p>Connect your Strava account to visualize your activities in 3D</p>
+    <a href="#" id="connect-btn" class="strava-btn">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M15.387 17.272l-4.607-8.486H7.393l3.89 7.163L6.99 22.4h2.198l2.608-3.726 2.608 3.726h2.198l-4.607-8.486h3.387l3.89-7.163h-3.387l-2.608 4.726L12.779 2.4h-2.198L8.973 6.126 6.365 2.4H4.167l4.607 8.486H5.387l-3.89 7.163h3.387l2.608-4.726 2.608 4.726h2.198l-2.608-4.726 4.607 8.486h2.198l-3.89-7.163h3.387l3.89-7.163h-3.387l-2.608 4.726-2.608-4.726H9.773l3.89-7.163h2.198l-2.608 4.726z"/>
+      </svg>
+      Connect with Strava
+    </a>
   </div>
   <script>
     async function init() {
       const res = await fetch('/api/config')
       const config = await res.json()
-      const scope = 'read,activity:read_all'
-      document.getElementById('connect-btn').href =
-        `/api/strava/authorize`
+      document.getElementById('connect-btn').href = `/api/strava/authorize`
     }
     init()
   </script>

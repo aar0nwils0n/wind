@@ -44,7 +44,7 @@ router.get('/callback', async (req, res) => {
     }
     db.write()
 
-    res.redirect(`http://localhost:8080/strava-activities.html#user_id=${userId}&access_token=${access_token}`)
+    res.redirect(`/strava-activities.html#user_id=${userId}&access_token=${access_token}`)
   } catch (err) {
     console.error('Strava token exchange failed:', err.message)
     res.status(500).send('Authentication failed')

@@ -224,7 +224,7 @@ describe('GpxParser', () => {
         });
 
         test('formatSpeed', () => {
-            expect(GpxParser.formatSpeed(10)).toBe('36.0 km/h');
+            expect(GpxParser.formatSpeed(10)).toBe('22.4 mph');
         });
     });
 

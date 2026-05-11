@@ -39,6 +39,7 @@ class App {
         this.windDirection = document.getElementById('wind-direction');
         this.upwindOverlay = document.getElementById('upwind-overlay');
         this.upwindAngle = document.getElementById('upwind-angle');
+        this.currentSpeed = document.getElementById('current-speed');
     }
 
     initScene() {
@@ -209,7 +210,7 @@ class App {
             const direction = directions[idx];
 
             if (speed != null) {
-                this.windSpeed.textContent = `${Math.round(speed)} km/h`;
+                this.windSpeed.textContent = `${Math.round(speed * 0.621371)} mph`;
                 this.windDirection.textContent = this.degToCompass(direction);
                 this.windOverlay.classList.remove('hidden');
                 this.windDir = direction;
@@ -234,6 +235,7 @@ class App {
 
         if (pointIndex < 1) {
             this.upwindAngle.textContent = '--';
+            this.currentSpeed.textContent = '0 mph';
             return;
         }
 
@@ -251,6 +253,12 @@ class App {
         const upwindAngle = 90 - angleToWind;
 
         this.upwindAngle.textContent = `${Math.round(upwindAngle)}°`;
+
+        const timeDelta = (currPoint.elapsedTime - prevPoint.elapsedTime) / 1000;
+        if (timeDelta > 0) {
+            const speedMps = currPoint.distanceFromPrev / timeDelta;
+            this.currentSpeed.textContent = GpxParser.formatSpeed(speedMps);
+        }
     }
 
     updateTimeDisplay() {

@@ -44,7 +44,7 @@ test.describe('GPX 3D Visualizer - E2E', () => {
         expect(durationText).toMatch(/[\d:]+/);
 
         const speedText = await page.locator('#stat-speed').textContent();
-        expect(speedText).toMatch(/[\d.]+ km\/h/);
+        expect(speedText).toMatch(/[\d.]+ mph/);
     });
 
     test('play/pause button toggles correctly', async ({ page }) => {
