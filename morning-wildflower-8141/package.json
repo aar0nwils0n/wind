@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
-    "build": "node build.js",
+    "build": "vite build",
     "deploy": "wrangler deploy",
     "dev": "wrangler dev",
     "start": "wrangler dev"
@@ -12,7 +12,7 @@
     "public"
   ],
   "devDependencies": {
-    "esbuild": "^0.28.0",
+    "vite": "^8.0.0",
     "wrangler": "^4.90.0"
   }
 }

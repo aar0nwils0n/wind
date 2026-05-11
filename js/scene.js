@@ -1,4 +1,4 @@
-class Scene3D {
+export class Scene3D {
     constructor(container) {
         this.container = container;
         this.scene = null;

@@ -1,3 +1,6 @@
+import { GpxParser } from './gpx-parser.js';
+import { Scene3D } from './scene.js';
+
 class App {
     constructor() {
         this.scene = null;
@@ -19,7 +22,6 @@ class App {
         this.canvasContainer = document.getElementById('canvas-container');
         this.uploadOverlay = document.getElementById('upload-overlay');
         this.gpxInput = document.getElementById('gpx-input');
-        this.loadExampleBtn = document.getElementById('load-example-btn');
         this.controls = document.getElementById('controls');
         this.statsBar = document.getElementById('stats');
         this.loading = document.getElementById('loading');
@@ -48,10 +50,6 @@ class App {
 
     bindEvents() {
         this.gpxInput.addEventListener('change', (e) => this.handleFileSelect(e));
-
-        if (this.loadExampleBtn) {
-            this.loadExampleBtn.addEventListener('click', () => this.loadExampleGpx());
-        }
 
         this.uploadOverlay.addEventListener('dragover', (e) => {
             e.preventDefault();
@@ -106,17 +104,6 @@ class App {
         if (file) {
             this.loadGpxFile(file);
         }
-    }
-
-    async loadExampleGpx() {
-        this.loading.classList.remove('hidden');
-
-        const response = await fetch('activity_22766008358.gpx');
-        if (!response.ok) {
-            throw new Error('Could not load example GPX file');
-        }
-        const text = await response.text();
-        this.loadGpxText(text)
     }
 
     async loadGpxFile(file) {

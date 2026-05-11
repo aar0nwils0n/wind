@@ -1,4 +1,4 @@
-class GpxParser {
+export class GpxParser {
     static parse(xmlString) {
         const parser = new DOMParser();
         const xml = parser.parseFromString(xmlString, 'text/xml');
@@ -151,6 +151,3 @@ class GpxParser {
     }
 }
 
-if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { GpxParser };
-}

@@ -46,12 +46,6 @@
                 </svg>
                 <span>Upload GPX File</span>
             </label>
-            <button id="load-example-btn" class="example-btn">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <polygon points="5 3 19 12 5 21 5 3"/>
-                </svg>
-                <span>Load Example Activity</span>
-            </button>
             <input type="file" id="gpx-input" accept=".gpx" hidden>
             <p class="hint">or drag and drop a .gpx file</p>
         </div>
@@ -125,8 +119,6 @@
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="js/gpx-parser.js"></script>
-    <script src="js/scene.js"></script>
-    <script src="js/app.js"></script>
+    <script type="module" src="js/app.js"></script>
 </body>
 </html>
